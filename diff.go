@@ -550,7 +550,7 @@ const (
 	DiffFindRemoveUnmodified            DiffFindOptionsFlag = C.GIT_DIFF_FIND_REMOVE_UNMODIFIED
 )
 
-//TODO implement git_diff_similarity_metric
+// TODO implement git_diff_similarity_metric
 type DiffFindOptions struct {
 	Flags                      DiffFindOptionsFlag
 	RenameThreshold            uint16
@@ -841,6 +841,67 @@ func DiffBlobs(oldBlob *Blob, oldAsPath string, newBlob *Blob, newAsPath string,
 	ecode := C._go_git_diff_blobs(oldBlobPtr, oldBlobPath, newBlobPtr, newBlobPath, copts, 1, intHunks, intLines, handle)
 	runtime.KeepAlive(oldBlob)
 	runtime.KeepAlive(newBlob)
+	if ecode < 0 {
+		return MakeGitError(ecode)
+	}
+
+	return nil
+}
+
+type ApplyOptions struct {
+	Version uint
+	Flags   uint
+	// TODO: there are some more flags, not currently used
+}
+
+func DefaultApplyOptions() (*ApplyOptions, error) {
+	opts := C.git_apply_options{}
+
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	ecode := C.git_apply_init_options(&opts, C.GIT_REBASE_OPTIONS_VERSION)
+	if ecode < 0 {
+		return nil, MakeGitError(ecode)
+	}
+
+	return applyOptionsFromC(&opts), nil
+}
+
+func (a *ApplyOptions) toC() *C.git_apply_options {
+	if a == nil {
+		return nil
+	}
+
+	opts := &C.git_apply_options{
+		version: C.uint(a.Version),
+		flags:   C.uint(a.Flags),
+	}
+
+	return opts
+}
+
+func applyOptionsFromC(opts *C.git_apply_options) *ApplyOptions {
+	return &ApplyOptions{
+		Version: uint(opts.version),
+		Flags:   uint(opts.flags),
+	}
+}
+
+type GitApplyLocation int
+
+const (
+	GitApplyLocationWorkdir GitApplyLocation = C.GIT_APPLY_LOCATION_WORKDIR
+	GitApplyLocationIndex   GitApplyLocation = C.GIT_APPLY_LOCATION_INDEX
+	GitApplyLocationBoth    GitApplyLocation = C.GIT_APPLY_LOCATION_BOTH
+)
+
+func (v *Repository) ApplyDiff(diff *Diff, location GitApplyLocation, opts *ApplyOptions) error {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	ecode := C.git_apply(v.ptr, diff.ptr, int(location), opts.toC())
+	runtime.KeepAlive(v)
 	if ecode < 0 {
 		return MakeGitError(ecode)
 	}

@@ -236,3 +236,34 @@ func TestDiffBlobs(t *testing.T) {
 		t.Fatalf("Bad number of lines iterated")
 	}
 }
+
+func Test_ApplyDiff_Addfile(t *testing.T) {
+	t.Parallel()
+	repo := createTestRepo(t)
+	defer cleanupTestRepo(t, repo)
+
+	addFileTree := addAndGetTree(t, repo, "file1", `hello`)
+	addSecondFileTree := addAndGetTree(t, repo, "file1", `hello2`)
+
+	diff, err := repo.DiffTreeToTree(addFileTree, addSecondFileTree, nil)
+	checkFatal(t, err)
+
+	err = repo.CheckoutTree(addFileTree, nil)
+	checkFatal(t, err)
+
+	err = repo.ApplyDiff(diff, GitApplyLocationBoth, nil)
+	checkFatal(t, err)
+}
+
+func addAndGetTree(t *testing.T, repo *Repository, filename string, content string) *Tree {
+	commitId, err := commitSomething(repo, filename, content)
+	checkFatal(t, err)
+
+	commit, err := repo.LookupCommit(commitId)
+	checkFatal(t, err)
+
+	tree, err := commit.Tree()
+	checkFatal(t, err)
+
+	return tree
+}
