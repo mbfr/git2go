@@ -274,6 +274,10 @@ func Test_ApplyDiff_Addfile(t *testing.T) {
 		raw, err := diff.ToBuf(DiffFormatPatch)
 		checkFatal(t, err)
 
+		if len(raw) == 0 {
+			t.Error("empty diff created")
+		}
+
 		diff2, err := DiffFromBuffer(raw, repo)
 		checkFatal(t, err)
 
