@@ -243,13 +243,18 @@ func Test_ApplyDiff_Addfile(t *testing.T) {
 	defer cleanupTestRepo(t, repo)
 
 	seedTestRepo(t, repo)
-	// err := createBranch(repo, "master")
-	// checkFatal(t, err)
 
-	addFileTree := addAndGetTree(t, repo, "file1", `hello`)
-	addSecondFileTree := addAndGetTree(t, repo, "file1", `hello2`)
+	addFirstFileCommit, addFileTree := addAndGetTree(t, repo, "file1", `hello`)
+	_, addSecondFileTree := addAndGetTree(t, repo, "file2", `hello2`)
 
 	diff, err := repo.DiffTreeToTree(addFileTree, addSecondFileTree, nil)
+	checkFatal(t, err)
+
+	err = repo.ApplyDiff(diff, GitApplyLocationBoth, nil)
+	if err == nil {
+		t.Error("expecting applying patch to current repo to fail")
+	}
+	err = repo.ResetToCommit(addFirstFileCommit, ResetHard, &CheckoutOpts{})
 	checkFatal(t, err)
 
 	err = repo.CheckoutTree(addFileTree, nil)
@@ -259,7 +264,7 @@ func Test_ApplyDiff_Addfile(t *testing.T) {
 	checkFatal(t, err)
 }
 
-func addAndGetTree(t *testing.T, repo *Repository, filename string, content string) *Tree {
+func addAndGetTree(t *testing.T, repo *Repository, filename string, content string) (*Commit, *Tree) {
 	commitId, err := commitSomething(repo, filename, content)
 	checkFatal(t, err)
 
@@ -269,5 +274,5 @@ func addAndGetTree(t *testing.T, repo *Repository, filename string, content stri
 	tree, err := commit.Tree()
 	checkFatal(t, err)
 
-	return tree
+	return commit, tree
 }

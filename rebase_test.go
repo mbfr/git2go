@@ -467,12 +467,17 @@ func commitSomethingOpts(repo *Repository, something, content string, commitOpts
 		if err != nil {
 			return nil, err
 		}
-		_, err = repo.References.Create(
+		ref, err := repo.References.Create(
 			head.Name(),
 			newCommit.Id(),
 			true,
 			"repoint to signed commit",
 		)
+		if err != nil {
+			return nil, err
+		}
+
+		commit, err = repo.LookupCommit(ref.Target())
 		if err != nil {
 			return nil, err
 		}
