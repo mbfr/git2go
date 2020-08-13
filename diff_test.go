@@ -242,6 +242,10 @@ func Test_ApplyDiff_Addfile(t *testing.T) {
 	repo := createTestRepo(t)
 	defer cleanupTestRepo(t, repo)
 
+	seedTestRepo(t, repo)
+	// err := createBranch(repo, "master")
+	// checkFatal(t, err)
+
 	addFileTree := addAndGetTree(t, repo, "file1", `hello`)
 	addSecondFileTree := addAndGetTree(t, repo, "file1", `hello2`)
 

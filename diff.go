@@ -3,6 +3,7 @@ package git
 /*
 #include <git2.h>
 
+extern void _go_git_apply_init_options(git_apply_options *options);
 extern int _go_git_diff_foreach(git_diff *diff, int eachFile, int eachHunk, int eachLine, void *payload);
 extern void _go_git_setup_diff_notify_callbacks(git_diff_options* opts);
 extern int _go_git_diff_blobs(git_blob *old, const char *old_path, git_blob *new, const char *new_path, git_diff_options *opts, int eachFile, int eachHunk, int eachLine, void *payload);
@@ -860,10 +861,7 @@ func DefaultApplyOptions() (*ApplyOptions, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	ecode := C.git_apply_init_options(&opts, C.GIT_REBASE_OPTIONS_VERSION)
-	if ecode < 0 {
-		return nil, MakeGitError(ecode)
-	}
+	C._go_git_apply_init_options(&opts)
 
 	return applyOptionsFromC(&opts), nil
 }
@@ -900,7 +898,7 @@ func (v *Repository) ApplyDiff(diff *Diff, location GitApplyLocation, opts *Appl
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	ecode := C.git_apply(v.ptr, diff.ptr, int(location), opts.toC())
+	ecode := C.git_apply(v.ptr, diff.ptr, C.git_apply_location_t(location), opts.toC())
 	runtime.KeepAlive(v)
 	if ecode < 0 {
 		return MakeGitError(ecode)
