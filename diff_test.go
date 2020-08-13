@@ -238,30 +238,48 @@ func TestDiffBlobs(t *testing.T) {
 }
 
 func Test_ApplyDiff_Addfile(t *testing.T) {
-	t.Parallel()
 	repo := createTestRepo(t)
 	defer cleanupTestRepo(t, repo)
 
 	seedTestRepo(t, repo)
 
 	addFirstFileCommit, addFileTree := addAndGetTree(t, repo, "file1", `hello`)
-	_, addSecondFileTree := addAndGetTree(t, repo, "file2", `hello2`)
+	addSecondFileCommit, addSecondFileTree := addAndGetTree(t, repo, "file2", `hello2`)
 
 	diff, err := repo.DiffTreeToTree(addFileTree, addSecondFileTree, nil)
 	checkFatal(t, err)
 
-	err = repo.ApplyDiff(diff, GitApplyLocationBoth, nil)
-	if err == nil {
-		t.Error("expecting applying patch to current repo to fail")
-	}
-	err = repo.ResetToCommit(addFirstFileCommit, ResetHard, &CheckoutOpts{})
-	checkFatal(t, err)
+	t.Run("check does not apply to current tree because file exists", func(t *testing.T) {
+		err = repo.ResetToCommit(addSecondFileCommit, ResetHard, &CheckoutOpts{})
+		checkFatal(t, err)
 
-	err = repo.CheckoutTree(addFileTree, nil)
-	checkFatal(t, err)
+		err = repo.ApplyDiff(diff, GitApplyLocationBoth, nil)
+		if err == nil {
+			t.Error("expecting applying patch to current repo to fail")
+		}
+	})
 
-	err = repo.ApplyDiff(diff, GitApplyLocationBoth, nil)
-	checkFatal(t, err)
+	t.Run("check apply to correct commit", func(t *testing.T) {
+		err = repo.ResetToCommit(addFirstFileCommit, ResetHard, &CheckoutOpts{})
+		checkFatal(t, err)
+
+		err = repo.ApplyDiff(diff, GitApplyLocationBoth, nil)
+		checkFatal(t, err)
+	})
+
+	t.Run("check convert to raw buffer and apply", func(t *testing.T) {
+		err = repo.ResetToCommit(addFirstFileCommit, ResetHard, &CheckoutOpts{})
+		checkFatal(t, err)
+
+		raw, err := diff.ToBuf(DiffFormatPatch)
+		checkFatal(t, err)
+
+		diff2, err := DiffFromBuffer(raw, repo)
+		checkFatal(t, err)
+
+		err = repo.ApplyDiff(diff2, GitApplyLocationBoth, nil)
+		checkFatal(t, err)
+	})
 }
 
 func addAndGetTree(t *testing.T, repo *Repository, filename string, content string) (*Commit, *Tree) {

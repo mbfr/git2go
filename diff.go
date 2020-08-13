@@ -906,3 +906,18 @@ func (v *Repository) ApplyDiff(diff *Diff, location GitApplyLocation, opts *Appl
 
 	return nil
 }
+
+func DiffFromBuffer(buffer []byte, repo *Repository) (*Diff, error) {
+	var diff *C.git_diff
+
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	ecode := C.git_diff_from_buffer(&diff, C.CString(string(buffer)), C.size_t(len(buffer)))
+	if ecode < 0 {
+		return nil, MakeGitError(ecode)
+	}
+	runtime.KeepAlive(diff)
+
+	return newDiffFromC(diff, repo), nil
+}
