@@ -174,20 +174,3 @@ func (stream *BlobWriteStream) Commit() (*Oid, error) {
 
 	return newOidFromC(&oid), nil
 }
-
-func (v *Repository) CreateFromId(oid *Oid) (*Blob, error) {
-	var blob *C.git_blob
-
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
-	ecode := C.git_blob_lookup(&blob, v.ptr, oid.toC())
-	if ecode < 0 {
-		return nil, MakeGitError(ecode)
-	}
-
-	runtime.KeepAlive(v)
-	runtime.KeepAlive(blob)
-
-	return blob, nil
-}

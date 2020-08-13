@@ -91,35 +91,3 @@ func (v *Repository) PatchFromBuffers(oldPath, newPath string, oldBuf, newBuf []
 	}
 	return newPatchFromC(patchPtr), nil
 }
-
-func (v *Repository) PatchFromBlobs(oldPath, newPath string, oldBlob, newBlob *Blob, opts *DiffOptions) (*Patch, error) {
-	var patch *C.git_patch
-
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
-	var cOldPath *C.char
-	if oldPath != "" {
-		cOldPath = C.CString(oldPath)
-		defer C.free(unsafe.Pointer(cOldPath))
-	}
-
-	var cNewPath *C.char
-	if newPath != "" {
-		cNewPath = C.CString(newPath)
-		defer C.free(unsafe.Pointer(cNewPath))
-	}
-
-	copts := diffOptionsToC(opts, v)
-	defer freeDiffOptions(copts)
-
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
-	ecode := C.git_patch_from_blobs(&patch, oldBlob.ptr, cOldPath, newBlob.ptr, cNewPath, copts)
-	if ecode < 0 {
-		return nil, MakeGitError(ecode)
-	}
-
-	return newPatchFromC(patch), nil
-}
