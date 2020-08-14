@@ -6,6 +6,18 @@
 
 typedef int (*gogit_submodule_cbk)(git_submodule *sm, const char *name, void *payload);
 
+void _go_git_apply_init_options(git_apply_options *options)
+{
+  git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
+  *options = opts;
+}
+
+void _go_git_populate_apply_cb(git_apply_options *options)
+{
+  options->delta_cb = (git_apply_delta_cb)deltaApplyCallback;
+  options->hunk_cb = (git_apply_hunk_cb)hunkApplyCallback;
+}
+
 void _go_git_populate_commit_sign_cb(git_rebase_options *opts)
 {
   opts->signing_cb = (git_commit_signing_cb)commitSignCallback;
